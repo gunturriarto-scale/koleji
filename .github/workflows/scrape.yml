@@ -3,7 +3,7 @@ name: KOL Scraper
 on:
   schedule:
     - cron: '0 16 */3 * *'  # 23:00 WIB setiap 3 hari
-  workflow_dispatch: {}       # bisa di-trigger manual dari GitHub UI
+  workflow_dispatch: {}       # trigger manual dari GitHub UI
 
 jobs:
   scrape:
@@ -28,7 +28,7 @@ jobs:
 
       - name: Run scraper
         env:
-          SPREADSHEET_ID: ${{ vars.SPREADSHEET_ID }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
           GOOGLE_SERVICE_ACCOUNT_PATH: ./keys/service-account.json
           BATCH_SIZE: 400
