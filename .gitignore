@@ -7,3 +7,4 @@ keys/
 .claude-flow/
 .idea/
 .vscode/
+*.png
