@@ -3,7 +3,7 @@ name: KOL Scraper
 on:
   schedule:
     - cron: '0 16 */3 * *'  # 23:00 WIB setiap 3 hari
-  workflow_dispatch: {}       # trigger manual dari GitHub UI
+  workflow_dispatch: {}
 
 jobs:
   scrape:
@@ -20,6 +20,19 @@ jobs:
       - run: npm ci
 
       - run: npm run build
+
+      - name: Debug — cek secrets
+        env:
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          GOOGLE_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "SPREADSHEET_ID length: ${#SPREADSHEET_ID}"
+          echo "APIFY_API_TOKEN length: ${#APIFY_API_TOKEN}"
+          echo "GOOGLE_SERVICE_ACCOUNT_JSON length: ${#GOOGLE_KEY}"
+          if [ -z "$SPREADSHEET_ID" ]; then echo "❌ SPREADSHEET_ID KOSONG"; else echo "✅ SPREADSHEET_ID OK"; fi
+          if [ -z "$APIFY_API_TOKEN" ]; then echo "❌ APIFY_API_TOKEN KOSONG"; else echo "✅ APIFY_API_TOKEN OK"; fi
+          if [ -z "$GOOGLE_KEY" ]; then echo "❌ GOOGLE_SERVICE_ACCOUNT_JSON KOSONG"; else echo "✅ GOOGLE_SERVICE_ACCOUNT_JSON OK"; fi
 
       - name: Setup Google Service Account
         run: |
