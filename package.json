@@ -1,0 +1,27 @@
+{
+  "name": "kol-scraper",
+  "version": "1.0.0",
+  "description": "KOL TikTok scraper automation - reads Google Sheets, scrapes via Apify, writes back results",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts --once",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "start:once": "node dist/index.js --once"
+  },
+  "dependencies": {
+    "googleapis": "^140.0.0",
+    "apify-client": "^2.9.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8",
+    "pino": "^9.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "tsx": "^4.16.2",
+    "@types/node": "^20.14.9",
+    "@types/node-cron": "^3.0.11"
+  }
+}
