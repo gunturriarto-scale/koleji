@@ -13,7 +13,8 @@ export interface SheetUpdates {
 
 /**
  * Write scrape results back to sheets.
- * For each sheet, batch-update columns I-O (indices 8-14, 0-based).
+ * For each sheet, batch-update columns I-N (indices 8-13, 0-based).
+ * Column O (Date Posting) is entered manually and must never be overwritten here.
  *
  * @param sheets - Google Sheets client
  * @param updates - Map of sheetName → array of { rowNumber, values }
@@ -32,7 +33,7 @@ export async function writeResults(
     cells.sort((a, b) => a.rowNumber - b.rowNumber);
 
     const requests = cells.map((cell) => ({
-      range: `${sheetName}!I${cell.rowNumber}:O${cell.rowNumber}`,
+      range: `${sheetName}!I${cell.rowNumber}:N${cell.rowNumber}`,
       values: [cell.values],
     }));
 

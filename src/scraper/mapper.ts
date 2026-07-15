@@ -2,7 +2,6 @@ import { SheetLink } from '../sheets/reader.js';
 import { SheetUpdates } from '../sheets/writer.js';
 import { ApifyTikTokResult } from '../apify/client.js';
 import { logger } from '../utils/logger.js';
-import { getWIBTimestamp } from '../utils/date.js';
 
 /**
  * Map Apify scrape results back to sheet updates.
@@ -14,15 +13,14 @@ import { getWIBTimestamp } from '../utils/date.js';
  * - L = Share = shareCount
  * - M = Comment = commentCount
  * - N = Save = collectCount
- * - O = Timestamp = current WIB time
  *
+ * Column O (Date Posting) is entered manually and is never written here.
  * Matches results to linkRefs by normalized URL.
  */
 export function mapResultsToUpdates(
   linkRefs: SheetLink[],
   results: ApifyTikTokResult[]
 ): SheetUpdates {
-  const timestamp = getWIBTimestamp();
   const updates: SheetUpdates = {};
 
   // Build URL lookup from results
@@ -40,19 +38,19 @@ export function mapResultsToUpdates(
     if (!result) {
       unmatchedCount++;
       logger.warn({ url: link.url, sheet: link.sheetName, row: link.rowNumber }, 'No match found for URL');
-      // Still write row but with 0 values and timestamp
+      // Still write row but with 0 values
       writeToUpdate(updates, link.sheetName, link.rowNumber, {
         playCount: 0,
         diggCount: 0,
         shareCount: 0,
         commentCount: 0,
         collectCount: 0,
-      }, timestamp);
+      });
       continue;
     }
 
     matchedCount++;
-    writeToUpdate(updates, link.sheetName, link.rowNumber, result, timestamp);
+    writeToUpdate(updates, link.sheetName, link.rowNumber, result);
   }
 
   logger.info({ matchedCount, unmatchedCount }, 'Mapped Apify results to sheet updates');
@@ -63,8 +61,7 @@ function writeToUpdate(
   updates: SheetUpdates,
   sheetName: string,
   rowNumber: number,
-  result: { playCount: number; diggCount: number; shareCount: number; commentCount: number; collectCount: number },
-  timestamp: string
+  result: { playCount: number; diggCount: number; shareCount: number; commentCount: number; collectCount: number }
 ): void {
   if (!updates[sheetName]) {
     updates[sheetName] = [];
@@ -78,8 +75,7 @@ function writeToUpdate(
       result.diggCount,    // K - Likes
       result.shareCount,   // L - Share
       result.commentCount, // M - Comment
-      result.collectCount,  // N - Save
-      timestamp,           // O - Timestamp
+      result.collectCount, // N - Save
     ],
   });
 }
