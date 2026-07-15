@@ -17,13 +17,17 @@ export interface ScrapeSummary {
   errors: string[];
 }
 
+const MAX_BATCH_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 5000;
+
 /**
  * Main scrape cycle:
  * 1. Read all [TT] and [YC] sheets → extract links
  * 2. Create URL batches (50/batch)
- * 3. Scrape each batch via Apify
- * 4. Map results → sheet updates
- * 5. Write results back to sheets
+ * 3. For each batch: scrape via Apify (retrying once on failure),
+ *    then map + write its results back to sheets immediately.
+ *    This way a later batch failing (or the job timing out) doesn't
+ *    discard results already earned by earlier batches.
  */
 export async function runScrapeCycle(): Promise<ScrapeSummary> {
   const summary: ScrapeSummary = {
@@ -61,45 +65,50 @@ export async function runScrapeCycle(): Promise<ScrapeSummary> {
       return summary;
     }
 
-    // Step 4: Scrape each batch sequentially
-    const allResults: Array<{ linkRefs: typeof allLinks; results: any[] }> = [];
-
+    // Step 4: Scrape each batch sequentially, writing results as soon as each batch is done
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
+      let results: Awaited<ReturnType<typeof runTikTokBatch>> | null = null;
+      let lastErrMsg = '';
 
-      try {
-        logger.info(
-          { batch: i + 1, total: batches.length, urls: batch.urls.length },
-          'Processing batch'
-        );
+      for (let attempt = 1; attempt <= MAX_BATCH_ATTEMPTS; attempt++) {
+        try {
+          logger.info(
+            { batch: i + 1, total: batches.length, urls: batch.urls.length, attempt },
+            'Processing batch'
+          );
 
-        const results = await runTikTokBatch(batch.urls);
-        allResults.push({ linkRefs: batch.linkRefs, results });
+          results = await runTikTokBatch(batch.urls);
+          break;
+        } catch (err) {
+          lastErrMsg = err instanceof Error ? err.message : String(err);
+          logger.warn({ err, batch: i + 1, attempt }, 'Batch attempt failed');
+          if (attempt < MAX_BATCH_ATTEMPTS) {
+            await delay(RETRY_DELAY_MS);
+          }
+        }
+      }
+
+      if (results) {
         summary.batchesSucceeded++;
 
-        // Small delay between batches to be nice to API
-        if (i < batches.length - 1) {
-          await delay(2000);
-        }
-      } catch (err) {
+        const updates = mapResultsToUpdates(batch.linkRefs, results);
+        await writeResults(sheets, updates);
+        summary.resultsWritten += Object.values(updates).reduce(
+          (sum, cells) => sum + cells.length,
+          0
+        );
+      } else {
         summary.batchesFailed++;
-        const errMsg = err instanceof Error ? err.message : String(err);
-        summary.errors.push(`Batch ${i + 1}: ${errMsg}`);
-        logger.error({ err, batch: i + 1 }, 'Batch failed');
+        summary.errors.push(`Batch ${i + 1}: ${lastErrMsg}`);
+        logger.error({ batch: i + 1, err: lastErrMsg }, 'Batch failed after retries');
+      }
+
+      // Small delay between batches to be nice to API
+      if (i < batches.length - 1) {
+        await delay(2000);
       }
     }
-
-    // Step 5: Map & write results
-    const allLinkRefs = allResults.flatMap((r) => r.linkRefs);
-    const allApiResults = allResults.flatMap((r) => r.results);
-
-    const updates = mapResultsToUpdates(allLinkRefs, allApiResults);
-    await writeResults(sheets, updates);
-
-    summary.resultsWritten = Object.values(updates).reduce(
-      (sum, cells) => sum + cells.length,
-      0
-    );
 
     logger.info(
       {
