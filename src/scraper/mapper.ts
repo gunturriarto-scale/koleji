@@ -117,7 +117,7 @@ function normalizeUrl(url: string): string {
 }
 
 function extractVideoId(url: string): string | null {
-  // TikTok video IDs are typically in the path like /video/1234567890
-  const match = url.match(/\/video\/(\d+)/);
+  // TikTok post IDs are in the path like /video/1234567890 or /photo/1234567890
+  const match = url.match(/\/(?:video|photo)\/(\d+)/);
   return match ? match[1] : null;
 }
