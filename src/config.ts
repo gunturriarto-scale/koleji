@@ -9,7 +9,7 @@ const envSchema = z.object({
   GOOGLE_SERVICE_ACCOUNT_PATH: z.string().default('./keys/service-account.json'),
   BATCH_SIZE: z.coerce.number().positive().max(500).default(400),
   APIFY_POLL_INTERVAL_MS: z.coerce.number().positive().default(5000),
-  APIFY_POLL_TIMEOUT_MS: z.coerce.number().positive().default(600000),
+  APIFY_POLL_TIMEOUT_MS: z.coerce.number().positive().default(1200000),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
 });
 
