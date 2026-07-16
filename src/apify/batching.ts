@@ -21,6 +21,32 @@ function isValidTikTokUrl(url: string): boolean {
 }
 
 /**
+ * TikTok redirects /<username>/video/<id> (missing the @ handle) to a
+ * generic /foryou page instead of the post, which the Apify actor can't
+ * resolve. Insert the @ if it's missing so the actor gets a real post URL.
+ * Short links (vt.tiktok.com / vm.tiktok.com) have no username segment
+ * and are left untouched.
+ */
+function ensureUsernameHandle(url: string): string {
+  try {
+    const u = new URL(url);
+    const hostname = u.hostname.toLowerCase();
+    if (hostname === 'vt.tiktok.com' || hostname === 'vm.tiktok.com') {
+      return url;
+    }
+    const parts = u.pathname.split('/');
+    if (parts.length > 1 && parts[1] && !parts[1].startsWith('@')) {
+      parts[1] = '@' + parts[1];
+      u.pathname = parts.join('/');
+      return u.toString();
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Create batches of URLs for Apify scraping.
  * Each batch = BATCH_SIZE URLs max, grouped by platform (TikTok only for now).
  */
@@ -43,7 +69,7 @@ export function createBatches(links: SheetLink[]): Batch[] {
   for (let i = 0; i < validLinks.length; i += batchSize) {
     const chunk = validLinks.slice(i, i + batchSize);
     batches.push({
-      urls: chunk.map((l) => l.url),
+      urls: chunk.map((l) => ensureUsernameHandle(l.url)),
       linkRefs: chunk,
     });
   }
