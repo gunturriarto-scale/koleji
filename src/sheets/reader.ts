@@ -80,6 +80,30 @@ function parseDateCell(value: string | undefined): Date | null {
 }
 
 /**
+ * Date window for picking rows by column O (Date Posting).
+ * Default: last 30 days up to today. If SCRAPE_DATE_FROM / SCRAPE_DATE_TO are set
+ * (manual backfill run), use that range instead (both ends inclusive).
+ */
+function getDateWindow(): { from: Date; to: Date | null } {
+  const parse = (v: string) => {
+    const [y, m, d] = v.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+  if (config.SCRAPE_DATE_FROM || config.SCRAPE_DATE_TO) {
+    const from = config.SCRAPE_DATE_FROM ? parse(config.SCRAPE_DATE_FROM) : new Date(2025, 0, 1);
+    let to: Date | null = null;
+    if (config.SCRAPE_DATE_TO) {
+      to = parse(config.SCRAPE_DATE_TO);
+      to.setHours(23, 59, 59, 999);
+    }
+    return { from, to };
+  }
+  const from = new Date();
+  from.setDate(from.getDate() - 30);
+  return { from, to: null };
+}
+
+/**
  * Read a single sheet, find all rows with non-empty column H (Link Post).
  * Only includes posts from the last 30 days (filtered by column O = Date Posting).
  * Returns { sheetName, rowNumber, url } for each valid row.
@@ -100,8 +124,7 @@ async function readSheetLinks(sheets: sheets_v4.Sheets, sheetName: string): Prom
     }
 
     const links: SheetLink[] = [];
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 30);
+    const { from: cutoffDate, to: endDate } = getDateWindow();
     let skippedByDate = 0;
     let skippedEmptyLink = 0;
 
@@ -130,7 +153,7 @@ async function readSheetLinks(sheets: sheets_v4.Sheets, sheetName: string): Prom
           skippedByDate++;
           continue;
         }
-        if (postDate < cutoffDate) {
+        if (postDate < cutoffDate || (endDate && postDate > endDate)) {
           skippedByDate++;
           continue;
         }
