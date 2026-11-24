@@ -11,6 +11,18 @@ const envSchema = z.object({
   APIFY_POLL_INTERVAL_MS: z.coerce.number().positive().default(5000),
   APIFY_POLL_TIMEOUT_MS: z.coerce.number().positive().default(1200000),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  // Optional one-off date range (YYYY-MM-DD, inclusive) for manual backfill runs.
+  // When both are empty, the normal "last 30 days" filter is used.
+  SCRAPE_DATE_FROM: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'SCRAPE_DATE_FROM must be YYYY-MM-DD')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  SCRAPE_DATE_TO: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'SCRAPE_DATE_TO must be YYYY-MM-DD')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
 });
 
 export type Config = z.infer<typeof envSchema>;
