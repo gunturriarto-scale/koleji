@@ -23,6 +23,9 @@ const envSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'SCRAPE_DATE_TO must be YYYY-MM-DD')
     .optional()
     .or(z.literal('').transform(() => undefined)),
+  // Optional: only scrape these tabs (comma-separated, e.g. "[TT] Mattedorable").
+  // Empty = all 14 [TT]/[YC] tabs (normal scheduled behaviour).
+  SCRAPE_SHEETS: z.string().optional().default(''),
 });
 
 export type Config = z.infer<typeof envSchema>;
@@ -42,11 +45,17 @@ export const CATEGORIES = [
 export const PLATFORMS_TO_SCRAPE = ['TT', 'YC'] as const;
 
 export function getTargetSheetNames(): string[] {
+  const only = config.SCRAPE_SHEETS.split(',').map((x) => x.trim()).filter(Boolean);
   const sheets: string[] = [];
   for (const cat of CATEGORIES) {
     for (const plat of PLATFORMS_TO_SCRAPE) {
       sheets.push(`[${plat}] ${cat}`);
     }
   }
-  return sheets;
+  if (only.length === 0) return sheets;
+  const unknown = only.filter((name) => !sheets.includes(name));
+  if (unknown.length > 0) {
+    throw new Error(`SCRAPE_SHEETS has unknown tab(s): ${unknown.join(', ')}. Valid: ${sheets.join(', ')}`);
+  }
+  return sheets.filter((name) => only.includes(name));
 }
