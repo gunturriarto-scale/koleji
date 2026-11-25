@@ -13,6 +13,10 @@ on:
         description: 'Manual run only: Date Posting to (YYYY-MM-DD, inclusive). Leave empty = today.'
         required: false
         default: ''
+      sheets:
+        description: 'Manual run only: tab(s) to scrape, comma-separated, e.g. [TT] Mattedorable. Leave empty = all tabs.'
+        required: false
+        default: ''
 
 jobs:
   scrape:
@@ -57,4 +61,5 @@ jobs:
           # Empty on scheduled runs -> normal last-30-days behaviour
           SCRAPE_DATE_FROM: ${{ github.event.inputs.date_from }}
           SCRAPE_DATE_TO: ${{ github.event.inputs.date_to }}
+          SCRAPE_SHEETS: ${{ github.event.inputs.sheets }}
         run: node dist/index.js --once
